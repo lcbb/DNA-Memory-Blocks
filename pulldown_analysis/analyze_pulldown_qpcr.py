@@ -1,3 +1,9 @@
+## NOTE: 
+##   Edit BLANK_NAMES if you want to change the sample names corresponding to blank wells 
+##        (default is 'BLANK')
+##   Edit PULL_NAMES if you want to set the names of the pulls used in this plate
+##        (default is to automatically determine the names of the pulls)
+
 import sys
 
 import numpy as np
@@ -29,6 +35,15 @@ def get_standard_curve(target):
   wells_1pg = qpcr_utils.get_wells_by_setup_info(setup_info, sample = '1pg', target = target)
   wells_10pg = qpcr_utils.get_wells_by_setup_info(setup_info, sample = '10pg', target = target)
 
+  # check and remove wells if they don't show up in raw_data. This shouldn't really happen
+  wells_100fg = list(filter(lambda w: w in raw_data, wells_100fg))
+  wells_1pg = list(filter(lambda w: w in raw_data, wells_1pg))
+  wells_10pg = list(filter(lambda w: w in raw_data, wells_10pg))
+
+  if len(wells_100fg) + len(wells_1pg) + len(wells_10pg) == 0:
+    print "WARNING: No qPCR data found for target", target
+    return lambda ct: np.nan
+
   amts = np.array([1e-13]*len(wells_100fg) + [1e-12]*len(wells_1pg) + [1e-11]*len(wells_10pg))
   CT = np.array([raw_data[w]['CT'] for w in wells_100fg+wells_1pg+wells_10pg])
 
@@ -58,8 +73,12 @@ def analyze_pull(pull_name, blank_names, targets, correct_targets=None, standard
         w
         for b in blank_names 
         for w in qpcr_utils.get_wells_by_setup_info(setup_info, sample=b, target=target)
+        if w in raw_data
     ]
-    pull_wells = qpcr_utils.get_wells_by_setup_info(setup_info, sample=pull_name, target=target)
+    pull_wells = list(filter(
+        lambda w: w in raw_data,
+        qpcr_utils.get_wells_by_setup_info(setup_info, sample=pull_name, target=target)
+    ))
 
     if target not in standard_curves:
       standard_curves[target] = get_standard_curve(target)
@@ -74,6 +93,8 @@ def analyze_pull(pull_name, blank_names, targets, correct_targets=None, standard
   return pull_amounts, pull_amounts_norm
 
 VERBOSITY = 1
+BLANK_NAMES = ['BLANK']
+PULL_NAMES = None # None = automatically determine pull names; replace with list of strings to explicitly list out the pulls
 
 if len(sys.argv) != 3:
   print "Usage: python analyze_pulldown_qpcr.py <results_path.csv> <setup_path.csv>"
@@ -87,12 +108,17 @@ preprocess_data(raw_data)
 
 targets = sorted(set(setup_info[w]['TARGET NAME'] for w in setup_info if 'TARGET NAME' in setup_info[w]))
 
-pulls = ['Cat+MAG', 'Cat-MAG', 'Dog+MAG', 'OR+', 'OR-']
+if PULL_NAMES is None:
+  pulls = sorted(set(setup_info[w]['SAMPLE NAME'] for w in setup_info if 'SAMPLE NAME' in setup_info[w]) - set(BLANK_NAMES + ['100fg', '1pg', '10pg']))
+  print "Automatically determined pulls on this plate:", pulls
+else:
+  pulls = PULL_NAMES
+
 pull_data = {}
 pull_data_norm = {}
 for pull in pulls:
   print "Processing pull: {}...".format(pull),
-  pull_data[pull], pull_data_norm[pull] = analyze_pull(pull_name = pull, blank_names = ['Blank2'], targets=targets)
+  pull_data[pull], pull_data_norm[pull] = analyze_pull(pull_name = pull, blank_names = BLANK_NAMES, targets=targets)
   print "Done!"
 
 pull_matrix = np.array([[pull_data[pull][target] for pull in pulls] for target in targets]) * 10**12

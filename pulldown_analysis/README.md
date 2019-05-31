@@ -3,3 +3,7 @@ This analysis code requires two separate .csv files describing the sample layout
 
 For example, the following will analyze the example data files:
 `$ python analyze_pulldown_qpcr.py qPCR_example_data.csv qPCR_example_setup.csv`
+
+# Customization
+This script assumes blank wells have the sample name 'BLANK'. To change this behavior, edit the BLANK_NAMES variable in analyze_pulldown_qpcr.py.
+To manually enter the names of the pulls, edit the PULL_NAMES variable. Change PULL_NAMES to None to automatically determine the pull names.
