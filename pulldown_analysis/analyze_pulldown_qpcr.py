@@ -76,6 +76,10 @@ def analyze_pull(pull_name, blank_names, targets, correct_targets=None, standard
         for w in qpcr_utils.get_wells_by_setup_info(raw_data, sample=b, target=target)
         if w in raw_data
     ]
+
+    if len(blank_wells) == 0:
+      print "Warning: No blank wells found for target {}. Is BLANK_NAMES set correctly?".format(target)
+
     pull_wells = list(filter(
         lambda w: w in raw_data,
         qpcr_utils.get_wells_by_setup_info(raw_data, sample=pull_name, target=target)
@@ -94,7 +98,7 @@ def analyze_pull(pull_name, blank_names, targets, correct_targets=None, standard
   return pull_amounts, pull_amounts_norm
 
 VERBOSITY = 1
-BLANK_NAMES = ['blank']
+BLANK_NAMES = ['Blank2']
 PULL_NAMES = None # None = automatically determine pull names; replace with list of strings to explicitly list out the pulls
 
 #if len(sys.argv) != 3:
@@ -133,7 +137,7 @@ pull_matrix = np.array([[pull_data[pull][target] for pull in pulls] for target i
 pull_matrix_norm = np.array([[pull_data_norm[pull][target] for pull in pulls] for target in targets])
 percentage_matrix = 100*np.array([[pull_data[pull][target] / np.nansum(pull_data[pull].values()) for pull in pulls] for target in targets])
 
-plt.figure()
+plt.figure(figsize=(12,4.8))
 
 plt.subplot(1,3,1)
 plt.imshow(pull_matrix, interpolation='nearest', norm=matplotlib.colors.LogNorm(vmin=np.nanmin(pull_matrix), vmax=np.nanmax(pull_matrix)))
