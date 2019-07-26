@@ -19,7 +19,7 @@ def preprocess_data(raw_data):
       if field in ['CT', 'Tm1', 'Tm2', 'Tm3']:
         val = raw_data[well][field]
         if val == 'Undetermined':
-          print "WARNING: Invalid {} value '{}' encountered in well {} ({})".format(field, val, well, setup_info[well]['WELL POSITION'])
+          print "WARNING: Invalid {} value '{}' encountered in well {} ({})".format(field, val, well, raw_data[well]['WELL POSITION'])
           raw_data[well][field] = np.nan
         else:
           raw_data[well][field] = float(raw_data[well][field])
@@ -31,9 +31,9 @@ def get_standard_curve(target):
   ##   a function mapping CT to amt
   ##   m
   ##   b
-  wells_100fg = qpcr_utils.get_wells_by_setup_info(setup_info, sample = '100fg', target = target)
-  wells_1pg = qpcr_utils.get_wells_by_setup_info(setup_info, sample = '1pg', target = target)
-  wells_10pg = qpcr_utils.get_wells_by_setup_info(setup_info, sample = '10pg', target = target)
+  wells_100fg = qpcr_utils.get_wells_by_setup_info(raw_data, sample = '100fg', target = target)
+  wells_1pg = qpcr_utils.get_wells_by_setup_info(raw_data, sample = '1pg', target = target)
+  wells_10pg = qpcr_utils.get_wells_by_setup_info(raw_data, sample = '10pg', target = target)
 
   # check and remove wells if they don't show up in raw_data. This shouldn't really happen
   wells_100fg = list(filter(lambda w: w in raw_data, wells_100fg))
@@ -62,6 +62,7 @@ def get_standard_curve(target):
     plt.title('standard curve ({})'.format(target))
 
     plt.savefig('standard-curve_{}.pdf'.format(target), bbox_inches='tight')
+    plt.close()
 
   return lambda ct: 2**((ct-res[1])/res[0])
 
@@ -72,12 +73,12 @@ def analyze_pull(pull_name, blank_names, targets, correct_targets=None, standard
     blank_wells = [
         w
         for b in blank_names 
-        for w in qpcr_utils.get_wells_by_setup_info(setup_info, sample=b, target=target)
+        for w in qpcr_utils.get_wells_by_setup_info(raw_data, sample=b, target=target)
         if w in raw_data
     ]
     pull_wells = list(filter(
         lambda w: w in raw_data,
-        qpcr_utils.get_wells_by_setup_info(setup_info, sample=pull_name, target=target)
+        qpcr_utils.get_wells_by_setup_info(raw_data, sample=pull_name, target=target)
     ))
 
     if target not in standard_curves:
@@ -93,23 +94,30 @@ def analyze_pull(pull_name, blank_names, targets, correct_targets=None, standard
   return pull_amounts, pull_amounts_norm
 
 VERBOSITY = 1
-BLANK_NAMES = ['BLANK']
+BLANK_NAMES = ['blank']
 PULL_NAMES = None # None = automatically determine pull names; replace with list of strings to explicitly list out the pulls
 
-if len(sys.argv) != 3:
-  print "Usage: python analyze_pulldown_qpcr.py <results_path.csv> <setup_path.csv>"
+#if len(sys.argv) != 3:
+#  print "Usage: python analyze_pulldown_qpcr.py <results_path.csv> <setup_path.csv>"
+#  sys.exit(0)
+#
+#data_path, setup_path = sys.argv[1:3]
+
+if len(sys.argv) != 2:
+  print "Usage: python analyze_pulldown_qpcr.py <results_path.csv>"
   sys.exit(0)
 
-data_path, setup_path = sys.argv[1:3]
+data_path = sys.argv[1]
 
-setup_info = qpcr_utils.parse_csv_table(setup_path)
+
+#setup_info = qpcr_utils.parse_csv_table(setup_path)
 raw_data = qpcr_utils.parse_csv_table(data_path)
 preprocess_data(raw_data)
 
-targets = sorted(set(setup_info[w]['TARGET NAME'] for w in setup_info if 'TARGET NAME' in setup_info[w]))
+targets = sorted(set(raw_data[w]['TARGET NAME'] for w in raw_data if 'TARGET NAME' in raw_data[w]))
 
 if PULL_NAMES is None:
-  pulls = sorted(set(setup_info[w]['SAMPLE NAME'] for w in setup_info if 'SAMPLE NAME' in setup_info[w]) - set(BLANK_NAMES + ['100fg', '1pg', '10pg']))
+  pulls = sorted(set(raw_data[w]['SAMPLE NAME'] for w in raw_data if 'SAMPLE NAME' in raw_data[w]) - set(BLANK_NAMES + ['100fg', '1pg', '10pg']))
   print "Automatically determined pulls on this plate:", pulls
 else:
   pulls = PULL_NAMES
@@ -123,10 +131,11 @@ for pull in pulls:
 
 pull_matrix = np.array([[pull_data[pull][target] for pull in pulls] for target in targets]) * 10**12
 pull_matrix_norm = np.array([[pull_data_norm[pull][target] for pull in pulls] for target in targets])
+percentage_matrix = 100*np.array([[pull_data[pull][target] / np.nansum(pull_data[pull].values()) for pull in pulls] for target in targets])
 
 plt.figure()
 
-plt.subplot(1,2,1)
+plt.subplot(1,3,1)
 plt.imshow(pull_matrix, interpolation='nearest', norm=matplotlib.colors.LogNorm(vmin=np.nanmin(pull_matrix), vmax=np.nanmax(pull_matrix)))
 plt.tick_params(bottom=False,labeltop=True,labelbottom=False,left=False)
 plt.xticks(np.arange(len(pulls)), pulls, rotation='vertical')
@@ -134,12 +143,20 @@ plt.yticks(np.arange(len(targets)), targets)
 cbar = plt.colorbar()
 plt.xlabel('Amount (raw), pg')
 
-plt.subplot(1,2,2)
-plt.imshow(pull_matrix_norm, interpolation='nearest', norm=matplotlib.colors.LogNorm(vmin=np.nanmin(pull_matrix_norm), vmax=np.nanmax(pull_matrix_norm)))
+plt.subplot(1,3,2)
+plt.imshow(pull_matrix_norm, interpolation='nearest', norm=matplotlib.colors.LogNorm(vmin=1.0, vmax=np.nanmax(pull_matrix_norm)))
 plt.tick_params(bottom=False,labeltop=True,labelbottom=False,left=False)
 plt.xticks(np.arange(len(pulls)), pulls, rotation='vertical')
 plt.yticks(np.arange(len(targets)), targets)
 plt.colorbar()
 plt.xlabel('Enrichment Over Blank')
+
+plt.subplot(1,3,3)
+plt.imshow(percentage_matrix, interpolation='nearest', vmin=0.0, vmax=100.0)
+plt.tick_params(bottom=False,labeltop=True,labelbottom=False,left=False)
+plt.xticks(np.arange(len(pulls)), pulls, rotation='vertical')
+plt.yticks(np.arange(len(targets)), targets)
+plt.colorbar()
+plt.xlabel('Percentage of Sample')
 
 plt.savefig('pull_analysis.pdf', bbox_inches='tight')
