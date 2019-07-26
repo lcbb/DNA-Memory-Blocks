@@ -2,11 +2,11 @@ import csv
 
 import numpy as np
 
-def parse_csv_table(path, ignore_blanks=True):
+def parse_csv_table(path, ignore_blanks=True, delimiter=','):
   # Looks for the header line beginning with "Well," to determine column headers
   # Subsequent lines are added to the data dict.
   inpath = open(path)
-  csvreader = csv.reader(inpath)
+  csvreader = csv.reader(inpath, delimiter=delimiter)
 
   # skip any extraneous lines at top of file
   # waits for a line starting with the first CSV column equal to "Well" (case-sensitive)
