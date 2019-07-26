@@ -98,7 +98,7 @@ def analyze_pull(pull_name, blank_names, targets, correct_targets=None, standard
   return pull_amounts, pull_amounts_norm
 
 VERBOSITY = 1
-BLANK_NAMES = ['Blank2']
+BLANK_NAMES = ['Blank2', 'BLANK', 'blank', 'Blank']
 PULL_NAMES = None # None = automatically determine pull names; replace with list of strings to explicitly list out the pulls
 
 #if len(sys.argv) != 3:
