@@ -78,19 +78,24 @@ def analyze_pull(pull_name, blank_names, targets, correct_targets=None, standard
     ]
 
     if len(blank_wells) == 0:
-      print "Warning: No blank wells found for target {}. Is BLANK_NAMES set correctly?".format(target)
+      print "WARNING: No blank wells found for target {}. Is BLANK_NAMES set correctly?".format(target)
+    if len(filter(lambda w: not np.isnan(raw_data[w]['CT']), blank_wells)) == 0:
+      print "WARNING: All blank wells for target {} have Undetermined CT. Calculations may fail.".format(target)
 
     pull_wells = list(filter(
         lambda w: w in raw_data,
         qpcr_utils.get_wells_by_setup_info(raw_data, sample=pull_name, target=target)
     ))
 
+    if len(filter(lambda w: not np.isnan(raw_data[w]['CT']), pull_wells)) == 0:
+      print "WARNING: All wells for pull {}, target {} have Undetermined CT. Calculations may fail.".format(pull_name, target)
+
     if target not in standard_curves:
       standard_curves[target] = get_standard_curve(target)
     standard_curve = standard_curves[target]
 
-    blank_amount = np.mean([standard_curve(raw_data[w]['CT']) for w in blank_wells])
-    pull_amount = np.mean([standard_curve(raw_data[w]['CT']) for w in pull_wells])
+    blank_amount = np.nanmean([standard_curve(raw_data[w]['CT']) for w in blank_wells])
+    pull_amount = np.nanmean([standard_curve(raw_data[w]['CT']) for w in pull_wells])
 
     pull_amounts[target] = pull_amount
     pull_amounts_norm[target] = pull_amount / blank_amount
