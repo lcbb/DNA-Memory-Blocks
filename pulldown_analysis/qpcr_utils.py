@@ -11,6 +11,8 @@ def parse_csv_table(path, ignore_blanks=True, delimiter=','):
   # skip any extraneous lines at top of file
   # waits for a line starting with the first CSV column equal to "Well" (case-sensitive)
   for line in csvreader:
+    if len(line) == 0:  continue
+
     if line[0] == 'Well':
       column_headers = [v.upper() for v in line[1:]]
       break

@@ -101,12 +101,6 @@ VERBOSITY = 1
 BLANK_NAMES = ['Blank2', 'BLANK', 'blank', 'Blank']
 PULL_NAMES = None # None = automatically determine pull names; replace with list of strings to explicitly list out the pulls
 
-#if len(sys.argv) != 3:
-#  print "Usage: python analyze_pulldown_qpcr.py <results_path.csv> <setup_path.csv>"
-#  sys.exit(0)
-#
-#data_path, setup_path = sys.argv[1:3]
-
 if len(sys.argv) != 2:
   print "Usage: python analyze_pulldown_qpcr.py <results_path>"
   sys.exit(0)
@@ -122,7 +116,6 @@ else:
   print "Results file has unknown suffix. Assuming comma-separated."
   data_file_delimiter = ','
 
-#setup_info = qpcr_utils.parse_csv_table(setup_path)
 raw_data = qpcr_utils.parse_csv_table(data_path, delimiter=data_file_delimiter)
 preprocess_data(raw_data)
 
