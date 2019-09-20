@@ -2,13 +2,20 @@ import sys
 import math
 from PIL import Image
 
-if len(sys.argv) != 4:
-  print("Usage: python3 DNA2Img.py <seq> <imgwidth> <imgheight>")
+if len(sys.argv) == 4:
+  seq = sys.argv[1]
+  width = int(sys.argv[2])
+  height = int(sys.argv[3])
+  outpath = None
+elif len(sys.argv) == 5:
+  seq = sys.argv[1]
+  width = int(sys.argv[2])
+  height = int(sys.argv[3])
+  outpath = sys.argv[4]
+else:
+  print("Usage: python3 DNA2Img.py <seq> <imgwidth> <imgheight> [<output_path>]")
   sys.exit(0)
 
-seq = sys.argv[1]
-width = int(sys.argv[2])
-height = int(sys.argv[3])
 
 # Relevant constants (must match those used in Img2DNA.py)
 SEED_MIN = 2
@@ -110,6 +117,8 @@ imgdata = imgdata[:width*height]
 img = Image.new(size = (width, height), mode = '1')
 img.putdata(imgdata)
 img = img.transpose(Image.TRANSPOSE)
+if outpath is not None:
+  img.save(outpath)
 img.show()
 
 # Verify hashes
