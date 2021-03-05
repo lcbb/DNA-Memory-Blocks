@@ -24,14 +24,6 @@ def make_rng(multiplier, offset, modulo, seed = 1):
 	return rng
 
 
-
-def huffman(seq, next_digit, rng = None):
-	nts = NUCLEOTIDES
-
-	rand = rng() if rng is not None else 0
-	offset = (nts.index(seq[-1]) + next_digit + 1 + rand) % 4
-	return nts[offset]
-
 def Int2Ternary(val, num_digits):
 
 	assert(0 <= val < 3**num_digits)
